@@ -88,6 +88,8 @@ class Germ.Get
 		@get_package_txt package_name, archive_path, (data) =>
 			package_information = jsyaml.safeLoad data
 			console.warn 'Got package information' if @verbose
+			if package_information.name != package_name
+				throw 'different package name in package information file.'
 			callback package_information
 	get_archive_place_root_directory: (package_information) ->
 		cwd = process.cwd()
