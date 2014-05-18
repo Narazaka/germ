@@ -1,0 +1,28 @@
+{
+  "name": "germ",
+  "version": "0.0.1",
+  "description": "Germ - Package Manager for Ukagaka Develop",
+  "homepage": "",
+  "main": "index.js",
+  "bin": "bin/germ.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "dependencies": {
+    "js-yaml": ">= 3.0.2",
+    "request": ">= 2.34.0",
+    "jszip": ">= 2.2.2",
+    "jconv": ">= 0.1.5",
+    "mkpath": ">= 0.1.0",
+    "argv": ">= 0.0.2"
+  },
+  "author": {
+    "name": "narazaka",
+    "url": "http://narazaka.net/"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Narazaka/germ.git"
+  }
+}
