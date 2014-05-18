@@ -21,41 +21,18 @@ class Germ.Get
 			archive_path = @get_archive_path package_name, package_database
 			@get_package_information package_name, archive_path, (package_information) =>
 				@get_archive archive_path, (data, response) =>
-					archive_place_root_directory = @get_archive_place_root_directory package_information
 					try
-						@place_archive data, package_name, archive_place_root_directory, (install_information) =>
+						@place_archive data, package_name, package_information, (install_information) =>
 							console.warn 'install finished'
 							if callback?
 								callback install_information
 					catch error
 						throw error
 	remove: (package_name, callback) ->
-		try
-			install_information_filename = @install_information_filename(package_name)
-			install_information = jsyaml.safeLoad fs.readFileSync install_information_filename, 'utf8'
-		catch error
-			throw error
-		try
-			directories = []
-			for element in install_information.elements
-				stats = fs.statSync element
-				if stats.isDirectory()
-					directories.push element
-				else
-					console.warn '-x ', element if @verbose
-					fs.unlinkSync element
-			for directory in directories.sort().reverse()
-				try
-					fs.rmdirSync directory
-					console.warn '-x ', directory if @verbose
-				catch error
-					console.warn '-= ', directory if @verbose
-			fs.unlinkSync install_information_filename
-		catch error
-			throw error
-		console.warn 'remove finished'
-		if callback?
-			callback install_information
+		@remove_installed package_name, (install_information) ->
+			console.warn 'remove finished'
+			if callback?
+				callback install_information
 	search: (package_name_part, callback) ->
 		@get_package_database (package_database) ->
 			package_matched = []
@@ -114,26 +91,47 @@ class Germ.Get
 			callback package_information
 	get_archive_place_root_directory: (package_information) ->
 		cwd = process.cwd()
+		place_on = package_information.place_on
+		if place_on?
+			if place_on == 'ghost'
+				root_directory = @detect_ghost_root_directory cwd
+				if root_directory?
+					return path.normalize root_directory
+			else if place_on == 'baseware'
+				root_directory = @detect_baseware_root_directory cwd
+				if root_directory?
+					return path.normalize root_directory
+		return path.normalize cwd
+	get_archive_place_root_directories: ->
+		cwd = path.normalize process.cwd()
+		ghost_root_directory = path.normalize @detect_ghost_root_directory cwd
+		baseware_root_directory = path.normalize @detect_baseware_root_directory cwd
+		directories = {}
+		directories[ghost_root_directory] = 1
+		directories[baseware_root_directory] = 2
+		directories[cwd] = 3
+		return (Object.keys(directories).sort (a, b) -> directories[a] - directories[b])
+	get_archive_place_directory: (package_information, archive_place_root_directory) ->
 		place = package_information.place
-		if place?
-			ghost_root_directory = @detect_ghost_root_directory cwd
-			if ghost_root_directory?
-				return path.join ghost_root_directory, '.' + place
-		return cwd
+		place = '' unless place?
+		return path.join archive_place_root_directory, '.'+place
 	encode_package_name: (package_name) ->
 		encodeURIComponent(package_name).replace /\*/g, '%2a'
 	install_information_filename: (package_name) ->
 		'.germ.package.' + @encode_package_name package_name
-	place_archive: (data, package_name, root_directory, callback) ->
+	install_information_filepath: (package_name, archive_place_root_directory) ->
+		path.join archive_place_root_directory, @install_information_filename package_name
+	place_archive: (data, package_name, package_information, callback) ->
+		archive_place_root_directory = @get_archive_place_root_directory package_information
+		archive_place_directory = @get_archive_place_directory package_information, archive_place_root_directory
 		zip = new JSZip()
 		zip.load data
-		install_information = {package_name: package_name, elements: []}
+		install_information = {package_information: package_information, elements: []}
 		for filename_key, content of zip.files
-			filename = jconv.decode(new Buffer(content.name, 'ascii'), 'SJIS')
-			filepath_local = path.join filename
-			filepath = path.join root_directory, filepath_local
+			filename = path.normalize jconv.decode(new Buffer(content.name, 'ascii'), 'SJIS')
+			filepath = path.join archive_place_directory, filename
 			dirpath = path.dirname filepath
-			install_information.elements.push filepath_local
+			install_information.elements.push filename
 			console.warn '-> ', filepath if @verbose
 			if content.options.dir
 				unless fs.existsSync dirpath
@@ -145,7 +143,47 @@ class Germ.Get
 					fs.writeFileSync filepath, content.asBinary(), 'binary'
 				catch error
 					throw error
-		fs.writeFileSync path.join(root_directory, @install_information_filename package_name), jsyaml.safeDump(install_information), 'utf8'
+		fs.writeFileSync @install_information_filepath(package_name, archive_place_root_directory), jsyaml.safeDump(install_information), 'utf8'
+		if callback?
+			callback install_information
+	remove_installed: (package_name, callback) ->
+		archive_place_root_directories = @get_archive_place_root_directories()
+		install_information_str = null
+		for archive_place_root_directory in archive_place_root_directories
+			try
+				install_information_filepath = @install_information_filepath(package_name, archive_place_root_directory)
+				install_information_str = fs.readFileSync install_information_filepath, 'utf8'
+				break
+			catch error
+				install_information_str = null
+		unless install_information_str?
+			throw 'cannot find install information file.'
+		try
+			install_information = jsyaml.safeLoad install_information_str
+		catch error
+			throw 'broken install information file. : '+install_information_filepath
+		package_information = install_information.package_information
+		elements = install_information.elements
+		archive_place_directory = @get_archive_place_directory package_information, archive_place_root_directory
+		try
+			directories = []
+			for element in elements
+				elementpath = path.join archive_place_directory, element
+				stats = fs.statSync elementpath
+				if stats.isDirectory()
+					directories.push elementpath
+				else
+					console.warn '-x ', elementpath if @verbose
+					fs.unlinkSync elementpath
+			for directorypath in directories.sort().reverse()
+				try
+					fs.rmdirSync directorypath
+					console.warn '-x ', directorypath if @verbose
+				catch error
+					console.warn '-= ', directorypath if @verbose
+			fs.unlinkSync install_information_filepath
+		catch error
+			throw error
 		if callback?
 			callback install_information
 	detect_ghost_root_directory: (directory) ->
@@ -162,42 +200,20 @@ class Germ.Get
 			return null
 		else
 			return test_directory
-###
+	detect_baseware_root_directory: (directory) ->
 		if directory.match /\//
 			path_separator = '/'
 		else
 			path_separator = '\\'
-		hierarchy = directory.split path_separator
-		master = hierarchy.lastIndexOf 'master'
-		ghost = hierarchy.lastIndexOf 'ghost'
-		shell = hierarchy.lastIndexOf 'shell'
-		if ghost == -1 and shell == -1
-			install_txt_path = path.join directory, 'install.txt'
-			if fs.existsSync install_txt_path
-				return '/'
-			else
-				return null
-		else if master != -1
-			if ghost != -1 and (master - ghost) == 1
-				
-			else if shell != -1 and (master - shell) == 1
-			else
-				
-		fs.exists 'install.txt', (exists) ->
-			if exists
-				directory = '/'
-			else
-				fs.exists 'master', (exists) ->
-					if exists
-						cwd = path.basename(process.cwd())
-						if cwd == 'ghost'
-							directory = '/ghost'
-						else if cwd == 'shell'
-							directory = '/shell'
-					else
-						fs.exists 'ghost', (exists) ->
-						
-###
+		test_directory = directory
+		test_directory_old = null
+		while (test_directory_old != test_directory) and not ((not fs.existsSync path.join test_directory, 'install.txt') and (fs.existsSync path.join test_directory, 'balloon') and (not fs.existsSync path.join test_directory, 'shell'))
+			test_directory_old = test_directory
+			test_directory = path.dirname test_directory
+		if test_directory_old == test_directory
+			return null
+		else
+			return test_directory
 
 class Germ.Get.Sync extends Germ.Get
 	constructor: () ->
