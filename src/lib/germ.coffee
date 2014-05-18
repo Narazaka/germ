@@ -137,10 +137,10 @@ class Germ.Get
 			console.warn '-> ', filepath if @verbose
 			if content.options.dir
 				unless fs.existsSync dirpath
-					mkpath dirpath
+					mkpath.sync dirpath
 			else
 				unless fs.existsSync dirpath
-					mkpath dirpath
+					mkpath.sync dirpath
 				try
 					fs.writeFileSync filepath, content.asBinary(), 'binary'
 				catch error
