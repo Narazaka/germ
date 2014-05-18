@@ -1,4 +1,4 @@
-Germ - Package Manager for Ukagaka Develop
+Germ - The Package Manager for Ukagaka Develop
 ==========================================
 
 Germは伺か開発のためのパッケージマネージャです。

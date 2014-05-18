@@ -1,7 +1,7 @@
 {
   "name": "germ",
   "version": "0.0.1",
-  "description": "Germ - Package Manager for Ukagaka Develop",
+  "description": "Germ - The Package Manager for Ukagaka Develop",
   "homepage": "",
   "main": "index.js",
   "bin": "bin/germ.js",
