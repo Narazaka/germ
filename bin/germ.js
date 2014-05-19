@@ -148,7 +148,7 @@ switch (args.targets[0]) {
       throw 'no package_name';
     }
     germ.information(package_name, function(package_information) {
-      return console.log("名前: " + package_information.name + "\nバージョン: " + package_information.version + "\nタイプ: " + package_information.type + "\n説明: " + package_information.description + "\nタグ: " + package_information.tags + "\nサイト: " + package_information.site + "\nreadme: " + package_information.readme + "\n配置場所: " + package_information.place + "\nライセンス: " + package_information.license);
+      return console.log("名前: " + package_information.name + "\nバージョン: " + (package_information.version || '') + "\nタイプ: " + (package_information.type || '') + "\n説明: " + (package_information.description || '') + "\nタグ: " + (package_information.tags || '') + "\nサイト: " + (package_information.site || '') + "\nreadme: " + (package_information.readme || '') + "\n配置基準: " + (package_information.place_on || '') + "\n配置場所: " + (package_information.place || '') + "\nライセンス: " + (package_information.licenses || ''));
     });
     break;
   case 'get':

@@ -115,14 +115,15 @@ switch args.targets[0]
 		germ.information package_name, (package_information) ->
 			console.log """
 				名前: #{package_information.name}
-				バージョン: #{package_information.version}
-				タイプ: #{package_information.type}
-				説明: #{package_information.description}
-				タグ: #{package_information.tags}
-				サイト: #{package_information.site}
-				readme: #{package_information.readme}
-				配置場所: #{package_information.place}
-				ライセンス: #{package_information.license}
+				バージョン: #{package_information.version || ''}
+				タイプ: #{package_information.type || ''}
+				説明: #{package_information.description || ''}
+				タグ: #{package_information.tags || ''}
+				サイト: #{package_information.site || ''}
+				readme: #{package_information.readme || ''}
+				配置基準: #{package_information.place_on || ''}
+				配置場所: #{package_information.place || ''}
+				ライセンス: #{package_information.licenses || ''}
 			"""
 	when 'get', 'g'
 		package_name = args.targets[1]
